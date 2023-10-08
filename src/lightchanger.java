@@ -10,7 +10,7 @@ class Main {
     public static void main(String[] args) {
         // Set brightness to 80% (value range: 0-100)
         Advapi32Util.registrySetIntValue(
-            Advapi32Util.HKEY.HKEY_LOCAL_MACHINE,
+            Advapi32Util.HKEY_LOCAL_MACHINE,
             "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System",
             "EnableBrightnessPolicy",
             80
