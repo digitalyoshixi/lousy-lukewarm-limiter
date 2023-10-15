@@ -1,6 +1,8 @@
 package davidspackage;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import com.github.kwhat.jnativehook.GlobalScreen;
@@ -8,8 +10,9 @@ import com.github.kwhat.jnativehook.NativeHookException;
 import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
 import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Properties;
 
 // Program to manually adjust the brightness, redness and monitor screen time. save the
 
@@ -27,8 +30,8 @@ class Main{
     }
 
     // check if a array is a subset of another array
-    public static boolean subsettest(List<String> arrlist, String[] array){
-        int arrlen = array.length;
+    public static boolean subsettest(List<String> arrlist, List<String> array){
+        int arrlen = array.size();
         int counter = 0;
         for (String i : array){
             for (String v : arrlist){
@@ -61,7 +64,7 @@ class Main{
         GlobalKeyListener ourglobalkey = new GlobalKeyListener();
 		GlobalScreen.addNativeKeyListener(ourglobalkey);
         
-        // ================== CONFIG FILE CONSTANTS ========
+       
 
 
         // ------------------ CONSTANTS --------------------
@@ -69,13 +72,52 @@ class Main{
         boolean canchangemode = true;
         List<String> currkey = ourglobalkey.currkeys; // current keys pressed down
         boolean redshiftstate = false;
-        String[] redshifttoggle = {"Alt","Shift","N"};
         boolean autobrightstate = false;
-        String[] autobrighttoggle = {"Alt","Shift","M"};
-        
+        // our config variables
+        int REDSHIFTMIN,REDSHIFTCAP,BRIGHTNESSMIN,BRIGHTNESSCAP;
+        String EYESFX;
+        List<String> REDSHIFTBIND = Arrays.asList("Alt","Shift","N");
+        List<String> AUTOBRIGHTBIND = Arrays.asList("Alt","Shift","M");
         
         // ----------------- NON-CONSTANTS ----------------
         int brightness = 10;
+
+        // ================== CONFIG FILE READING ========
+        String optionfilepath = "";
+        // fetch the config file path from command line
+        if (args.length > 0){ // if we have arguments:
+            // search for argument flag '-options'
+            for (int i = 0; i < args.length; i++){
+                if ((args[i].equals("-config")) && (i < (args.length-1))){
+                    optionfilepath = args[i+1];
+                }
+            }
+
+        }
+        
+        
+
+        Properties prop = new Properties();
+        try (FileInputStream fis = new FileInputStream(optionfilepath)) {
+            prop.load(fis);
+            // sucessful!
+            REDSHIFTBIND= Arrays.asList(prop.getProperty("REDSHIFTBIND").substring(1, prop.getProperty("REDSHIFTBIND").length()-1).split(","));
+            REDSHIFTMIN= Integer.parseInt(prop.getProperty("REDSHIFTMIN"));
+            REDSHIFTCAP= Integer.parseInt(prop.getProperty("REDSHIFTCAP"));
+            AUTOBRIGHTBIND= Arrays.asList(prop.getProperty("AUTOBRIGHTBIND").substring(1, prop.getProperty("AUTOBRIGHTBIND").length()-1).split(","));
+            BRIGHTNESSMIN= Integer.parseInt(prop.getProperty("BRIGHTNESSMIN"));
+            BRIGHTNESSCAP= Integer.parseInt(prop.getProperty("BRIGHTNESSCAP"));
+            EYESFX =prop.getProperty("EYESFX");
+
+            
+
+
+        } catch (FileNotFoundException ex) {
+            System.out.println("config file not found"); // FileNotFoundException catch is optional and can be collapsed
+        } catch (IOException ex) {
+            System.out.println("IO not resolved");
+        }
+        
         
         // -------------------------------------------------
         // ---------------- MAIN PROGRAM LOOP -------------
@@ -93,7 +135,7 @@ class Main{
             // keybind checks
             if (canchangemode) {
                 // redshift toggle
-                if (subsettest(currkey, redshifttoggle)){
+                if (subsettest(currkey, REDSHIFTBIND)){
                     canchangemode = false;
                     redshiftstate = !redshiftstate;
                     if (redshiftstate == true){
@@ -112,7 +154,7 @@ class Main{
                 }
                 
                 // autobright toggle
-                else if (subsettest(currkey, autobrighttoggle)){
+                else if (subsettest(currkey, AUTOBRIGHTBIND)){
                     canchangemode = false;
                     autobrightstate = !autobrightstate;
                     if (autobrightstate == true){
