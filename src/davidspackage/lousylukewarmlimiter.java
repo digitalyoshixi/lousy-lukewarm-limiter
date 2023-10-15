@@ -68,10 +68,11 @@ class Main{
         // mode changes
         boolean canchangemode = true;
         List<String> currkey = ourglobalkey.currkeys; // current keys pressed down
-        String[] redshifton = {"Alt","Shift","N"};
-        String[] redshiftoff = {"Alt","Shift","M"};
-        String[] autobrighton = {"Alt","Shift","J"};
-        String[] autobrightoff = {"Alt","Shift","K"};
+        boolean redshiftstate = false;
+        String[] redshifttoggle = {"Alt","Shift","N"};
+        boolean autobrightstate = false;
+        String[] autobrighttoggle = {"Alt","Shift","M"};
+        
         
         // ----------------- NON-CONSTANTS ----------------
         int brightness = 10;
@@ -91,44 +92,50 @@ class Main{
 
             // keybind checks
             if (canchangemode) {
-                // redshift on
-                if (subsettest(currkey, redshifton)){
-                    System.out.println("redshift on");
-                    String pwd = System.getProperty("user.dir");
-                    String command = String.format("powershell.exe & %s\\redshift\\redshift.exe -O 3700", pwd);
-                    commandtoss(command);
+                // redshift toggle
+                if (subsettest(currkey, redshifttoggle)){
                     canchangemode = false;
+                    redshiftstate = !redshiftstate;
+                    if (redshiftstate == true){
+                        System.out.println("redshift on");
+                        String pwd = System.getProperty("user.dir");
+                        String command = String.format("powershell.exe & %s\\redshift\\redshift.exe -O 3700", pwd);
+                        commandtoss(command);
+                    }
+                    else{
+                        System.out.println("redshift off");
+                        String pwd = System.getProperty("user.dir");
+                        String command = String.format("powershell.exe & %s\\redshift\\redshift.exe -x", pwd);
+                        commandtoss(command);
+                    }
+                    
                 }
-                // redshift off
-                else if (subsettest(currkey, redshiftoff)){
-                    System.out.println("redshift off");
-                    String pwd = System.getProperty("user.dir");
-                    String command = String.format("powershell.exe & %s\\redshift\\redshift.exe -x", pwd);
-                    commandtoss(command);
+                
+                // autobright toggle
+                else if (subsettest(currkey, autobrighttoggle)){
                     canchangemode = false;
+                    autobrightstate = !autobrightstate;
+                    if (autobrightstate == true){
+                        System.out.println("autobright on");
+                        brightness = 50;
+                        String command = "powershell.exe " + String.format("$brightness = %d;", brightness)
+                        + "$delay = 0;"
+                        + "$myMonitor = Get-WmiObject -Namespace root\\wmi -Class WmiMonitorBrightnessMethods;"
+                        + "$myMonitor.wmisetbrightness($delay, $brightness)";
+                        commandtoss(command);
+                    }
+                    else {
+                        System.out.println("autobright off");
+                        brightness = 10;
+                        String command = "powershell.exe " + String.format("$brightness = %d;", brightness)
+                        + "$delay = 0;"
+                        + "$myMonitor = Get-WmiObject -Namespace root\\wmi -Class WmiMonitorBrightnessMethods;"
+                        + "$myMonitor.wmisetbrightness($delay, $brightness)";
+                        commandtoss(command);
+                    }
+                    
                 }
-                // autobright on
-                else if (subsettest(currkey, autobrighton)){
-                    System.out.println("autobright on");
-                    brightness = 50;
-                    String command = "powershell.exe " + String.format("$brightness = %d;", brightness)
-                + "$delay = 0;"
-                + "$myMonitor = Get-WmiObject -Namespace root\\wmi -Class WmiMonitorBrightnessMethods;"
-                + "$myMonitor.wmisetbrightness($delay, $brightness)";
-                    commandtoss(command);
-                    canchangemode = false;
-                }
-                // autobright off
-                else if (subsettest(currkey, autobrightoff)){
-                    System.out.println("autobright off");
-                    brightness = 10;
-                    String command = "powershell.exe " + String.format("$brightness = %d;", brightness)
-                + "$delay = 0;"
-                + "$myMonitor = Get-WmiObject -Namespace root\\wmi -Class WmiMonitorBrightnessMethods;"
-                + "$myMonitor.wmisetbrightness($delay, $brightness)";
-                    commandtoss(command);
-                    canchangemode = false;
-                }
+             
             }
         }
 	}

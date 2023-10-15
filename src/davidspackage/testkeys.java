@@ -7,51 +7,41 @@ import java.util.ArrayList;
 import java.util.List;
 
 class GlobalKeyListener implements NativeKeyListener {
+	// my bag of keys
     List<String> currkeys = new ArrayList<>();
 
+	// key pressed event
 	public void nativeKeyPressed(NativeKeyEvent e) {
 		//System.out.println("Key Pressed: " + NativeKeyEvent.getKeyText(e.getKeyCode()));
-		String curentkey = NativeKeyEvent.getKeyText(e.getKeyCode());
+		String curentkey = NativeKeyEvent.getKeyText(e.getKeyCode()); // key code pressed
 		if ((currkeys.contains(curentkey)) == false) { // current key pressed not in keys list
-    		currkeys.add(curentkey);  
-			//System.out.println(currkeys);
+    		currkeys.add(curentkey);  // add to bag of keys
 		}
-		
-		//if (e.getKeyCode() == NativeKeyEvent.VC_ESCAPE) {
-        //    		try {
-        //        		GlobalScreen.unregisterNativeHook();
-        //    		} catch (NativeHookException nativeHookException) {
-        //        		nativeHookException.printStackTrace();
-        //    		}
-        //	}
-	}
 
+	}
+	// key released event
 	public void nativeKeyReleased(NativeKeyEvent e) {
 		//System.out.println("Key Released: " + NativeKeyEvent.getKeyText(e.getKeyCode()));
-		String curentkey = NativeKeyEvent.getKeyText(e.getKeyCode());
+		String curentkey = NativeKeyEvent.getKeyText(e.getKeyCode()); // key code released
 		if (currkeys.contains(curentkey)) { // current key pressed not in keys list
-    		int curentkeyindex = currkeys.indexOf(curentkey);
+    		// remove from bag of keys
+			int curentkeyindex = currkeys.indexOf(curentkey);
 			currkeys.remove(curentkeyindex);
-			//System.out.println(currkeys);
 		}
-		
 	}
 
-	//public void nativeKeyTyped(NativeKeyEvent e) {
-		//System.out.println("Key Typed: " + e.getKeyText(e.getKeyCode()));
-	//}
-
 	public static void main(String[] args) {
-		try {
+		// start the listener
+		try { // try to register this new hook to override the old hook.
 			GlobalScreen.registerNativeHook();
 		}
-		catch (NativeHookException ex) {
+		catch (NativeHookException ex) { // if the above exception occurs, there is an error
 			System.err.println("There was a problem registering the native hook.");
 			System.err.println(ex.getMessage());
 
 			System.exit(1);
 		}
-
+		// enable listener
 		GlobalScreen.addNativeKeyListener(new GlobalKeyListener());
 	}
 }
