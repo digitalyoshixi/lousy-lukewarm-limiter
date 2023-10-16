@@ -27,7 +27,6 @@ import java.util.Properties;
 
 class Main{
     
-    
     // ---------------------------------------------------------------
     // ------------------- FUNCTIONS --------------------------------
     // ---------------------------------------------------------------
@@ -57,7 +56,7 @@ class Main{
         }
     }
 
-    public static void getlocalred(int longitude, int lattitude){ 
+    public static void getlocalred(int redmin, int redmax, int longitude, int lattitude){ 
         // grab the time of day from lattitude and then return a color temperature accorind to that metric
 
         //vectorize and scalar the longitude and lattitude.
@@ -96,8 +95,11 @@ class Main{
         // no automatic variables. The settings I like
         int NOAUTORED = 4500;
         int NOAUTOBRIGHT = 5;
+        int BREAKDURATION;
+        Float LONGITUDE = null; // default strawmen values
+        Float LATITUDE = null; // strawman
         String EYESFX = null;
-        String LONGITUDELATITUDE = null;
+        
         List<String> REDSHIFTBIND = Arrays.asList("Alt","Shift","N"); // default keybind
         List<String> AUTOBRIGHTBIND = Arrays.asList("Alt","Shift","M"); // default keybind
         
@@ -129,8 +131,11 @@ class Main{
             AUTOBRIGHTBIND= Arrays.asList(prop.getProperty("AUTOBRIGHTBIND").substring(1, prop.getProperty("AUTOBRIGHTBIND").length()-1).split(","));
             BRIGHTNESSMIN= Integer.parseInt(prop.getProperty("BRIGHTNESSMIN"));
             BRIGHTNESSCAP= Integer.parseInt(prop.getProperty("BRIGHTNESSCAP"));
-            LONGITUDELATITUDE = prop.getProperty("EYESFX");
-            EYESFX =prop.getProperty("EYESFX");
+            LONGITUDE = Float.parseFloat(prop.getProperty("LONGITUDE"));
+            LATITUDE = Float.parseFloat(prop.getProperty("LATITUDE"));
+            BREAKDURATION = Integer.parseInt(prop.getProperty("BREAKDURATION"));
+            System.out.println(BREAKDURATION);
+            EYESFX = prop.getProperty("EYESFX");
             NOAUTORED =Integer.parseInt(prop.getProperty("NOAUTORED"));
             NOAUTOBRIGHT = Integer.parseInt(prop.getProperty("NOAUTOBRIGHT"));
             redness = REDSHIFTCAP;
@@ -157,7 +162,7 @@ class Main{
         System.out.println("through location-based adjustments of your computer's color temperature and gamma");
         System.out.println("aswell as providing a built in eye timer, how handy!");
         System.out.println();
-        if (LONGITUDELATITUDE != null){
+        if (LONGITUDE != null && LATITUDE != null){ // another hacky solution. cann
             System.out.print("Would you like to enable location-based auto adjustments?(Y/N) ");
             // ask user
             Scanner input = new Scanner(System.in);
@@ -166,6 +171,7 @@ class Main{
                 System.out.print("Retype(Y/N) ");
                 userinput = input.nextLine();
             }
+            input.close(); // good samaratan!
             if (userinput.equals("Y")){
                 locationbased = true;
             }
