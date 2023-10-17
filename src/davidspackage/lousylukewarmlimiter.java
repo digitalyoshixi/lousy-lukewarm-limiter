@@ -302,7 +302,7 @@ class Main{
                         System.out.println("autobright off");
                         if (!locationbased){
                             
-                            String command = "powershell.exe " + String.format("$brightness = %d;", NOAUTOBRIGHT)
+                            String command = "powershell.exe " + String.format("$brightness = %d;", NOAUTOBRIGHT+10)
                             + "$delay = 0;"
                             + "$myMonitor = Get-WmiObject -Namespace root\\wmi -Class WmiMonitorBrightnessMethods;"
                             + "$myMonitor.wmisetbrightness($delay, $brightness)";
@@ -323,7 +323,7 @@ class Main{
                         // gets progressively more red as day goes to night. follows cosine curve
                         int redhue = getlocalred(REDSHIFTMIN, REDSHIFTCAP, LONGITUDE);
                         System.out.println(redhue);
-                        String command = String.format("powershell.exe & %s\\redshift\\redshift.exe -O %d", pwd, redhue);
+                        String command = String.format("powershell.exe & %s\\\\redshift\\\\redshift.exe -x & %s\\redshift\\redshift.exe -O %d", pwd, redhue);
                         commandtoss(command);
                     }
                     if (autobrightstate){
