@@ -1,22 +1,25 @@
 package davidspackage;
 
+// useful libraries
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.File; 
 import java.io.InputStreamReader;
 import java.time.Instant;
-
-import com.github.kwhat.jnativehook.GlobalScreen;
-import com.github.kwhat.jnativehook.NativeHookException;
-import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
-import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+// key input
+import com.github.kwhat.jnativehook.GlobalScreen;
+import com.github.kwhat.jnativehook.NativeHookException;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
+
 
 // Program to manually adjust the brightness, redness and monitor screen time. save the
 
@@ -132,6 +135,11 @@ class Main{
         List<String> currkey = ourglobalkey.currkeys; // current keys pressed down
         boolean redshiftstate = false;
         boolean autobrightstate = false;
+        String pwd = System.getProperty("user.dir");
+
+        //String stopfilepath = pwd+"\\src\\stop.mp3";
+        
+        
         // our config variables
         // automatic variables
         int REDSHIFTMIN = 3300;
@@ -141,7 +149,6 @@ class Main{
         // no automatic variables. The settings I like
         int NOAUTORED = 4500;
         int NOAUTOBRIGHT = 5;
-        int BREAKDURATION;
         Float LONGITUDE = null; // default strawmen values
         
         List<String> REDSHIFTBIND = Arrays.asList("Alt","Shift","N"); // default keybind
@@ -178,8 +185,6 @@ class Main{
             BRIGHTNESSCAP= Integer.parseInt(prop.getProperty("BRIGHTNESSCAP"));
             LONGITUDE = Float.parseFloat(prop.getProperty("LONGITUDE"));
             UPDATECOUNTER = (int)Math.round(Float.parseFloat(prop.getProperty("UPDATECOUNTER"))/0.05);
-            BREAKDURATION = Integer.parseInt(prop.getProperty("BREAKDURATION"));
-            System.out.println(BREAKDURATION);
             NOAUTORED =Integer.parseInt(prop.getProperty("NOAUTORED"));
             NOAUTOBRIGHT = Integer.parseInt(prop.getProperty("NOAUTOBRIGHT"));
 
@@ -251,8 +256,6 @@ class Main{
         
         while (true){
             Thread.sleep(50); // check every 50ms
-            //System.out.println(currkey);
-            
             
             // mode check
             if (currkey.size() == 0){
@@ -268,7 +271,6 @@ class Main{
                     if (redshiftstate == true){
                         System.out.println("redshift on");
                         if (!locationbased){
-                            String pwd = System.getProperty("user.dir");
                             String command = String.format("powershell.exe & %s\\redshift\\redshift.exe -O %d", pwd, NOAUTORED);
                             commandtoss(command);
                         }
@@ -276,7 +278,6 @@ class Main{
                     else{
                         System.out.println("redshift off");
                         if (!locationbased){
-                            String pwd = System.getProperty("user.dir");
                             String command = String.format("powershell.exe & %s\\redshift\\redshift.exe -x", pwd);
                             commandtoss(command);
                         }
@@ -322,7 +323,6 @@ class Main{
                         // gets progressively more red as day goes to night. follows cosine curve
                         int redhue = getlocalred(REDSHIFTMIN, REDSHIFTCAP, LONGITUDE);
                         System.out.println(redhue);
-                        String pwd = System.getProperty("user.dir");
                         String command = String.format("powershell.exe & %s\\redshift\\redshift.exe -O %d", pwd, redhue);
                         commandtoss(command);
                     }
@@ -340,6 +340,7 @@ class Main{
                 }
             }
         currentcounter++; // update our frame counter.
+        
         }
         
         
