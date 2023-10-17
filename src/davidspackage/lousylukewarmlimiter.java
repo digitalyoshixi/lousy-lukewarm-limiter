@@ -7,6 +7,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.time.Instant;
+
 import com.github.kwhat.jnativehook.GlobalScreen;
 import com.github.kwhat.jnativehook.NativeHookException;
 import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
@@ -56,10 +58,54 @@ class Main{
         }
     }
 
-    public static void getlocalred(int redmin, int redmax, int longitude, int lattitude){ 
-        // grab the time of day from lattitude and then return a color temperature accorind to that metric
+    public static int getlocalred(int redmin, int redmax, Float longitude){ 
+        // grab the time of day from longitude and then return a color temperature accorind to that metric
+        
+        // grab UTC time
+        Float timeoffset = longitude*24/360;
+        String utc = Instant.now().toString();
+        int utchour = Integer.parseInt(utc.substring(11, 13));
+        int utcmin = Integer.parseInt(utc.substring(14, 16));
+        int utcsec = Integer.parseInt(utc.substring(17, 19));
 
-        //vectorize and scalar the longitude and lattitude.
+        // find timescale(x variable)
+        Float localsecondstime = (utchour-timeoffset)*3600 + utcmin*60+utcsec;
+        Float timescale = localsecondstime/86400; // 86400 seconds in a day. divided by local current time seconds
+        
+        // cosine graph to find color temperature
+        Float amplitude = ((float)redmax-(float)redmin)/2;
+        Float shift = (float)redmax - amplitude;
+        // color temperature
+        int colortemp = (int)Math.round(amplitude*Math.cos(2*3.1415*timescale)+shift);
+
+        return colortemp;
+    }
+
+    public static int getlocalbright(int brightmin, int brightmax, Float longitude){ 
+        // grab the time of day from longitude and then return a color temperature accorind to that metric
+        
+        // grab UTC time
+        Float timeoffset = longitude*24/360;
+        String utc = Instant.now().toString();
+        int utchour = Integer.parseInt(utc.substring(11, 13));
+        int utcmin = Integer.parseInt(utc.substring(14, 16));
+        int utcsec = Integer.parseInt(utc.substring(17, 19));
+
+        // find timescale(x variable)
+        Float localsecondstime = (utchour-timeoffset)*3600 + utcmin*60+utcsec;
+        Float timescale = localsecondstime/86400; // 86400 seconds in a day. divided by local current time seconds
+        
+        // cosine graph to find color temperature
+        Float amplitude = ((float)brightmax-(float)brightmin)/2;
+        Float shift = (float)brightmax - amplitude;
+        // color temperature
+        int brightness = (int)Math.round(amplitude*Math.cos(2*3.1415*timescale)+shift);
+
+        return brightness;
+    }
+
+    public static void eyebeep(){
+
     }
 
     // |||||||||||||||||| ======================================================= |||||||||||||
@@ -97,15 +143,14 @@ class Main{
         int NOAUTOBRIGHT = 5;
         int BREAKDURATION;
         Float LONGITUDE = null; // default strawmen values
-        Float LATITUDE = null; // strawman
-        String EYESFX = null;
         
         List<String> REDSHIFTBIND = Arrays.asList("Alt","Shift","N"); // default keybind
         List<String> AUTOBRIGHTBIND = Arrays.asList("Alt","Shift","M"); // default keybind
-        
+        int UPDATECOUNTER = 200; // every 5 seconds.
+
         // ----------------- NON-CONSTANTS ----------------
-        int brightness = 10;
-        int redness = 3000;
+        
+        int currentcounter = 0; // counter for updatecounter
 
         // ================== CONFIG FILE READING ========
         String optionfilepath = "";
@@ -132,13 +177,11 @@ class Main{
             BRIGHTNESSMIN= Integer.parseInt(prop.getProperty("BRIGHTNESSMIN"));
             BRIGHTNESSCAP= Integer.parseInt(prop.getProperty("BRIGHTNESSCAP"));
             LONGITUDE = Float.parseFloat(prop.getProperty("LONGITUDE"));
-            LATITUDE = Float.parseFloat(prop.getProperty("LATITUDE"));
+            UPDATECOUNTER = (int)Math.round(Float.parseFloat(prop.getProperty("UPDATECOUNTER"))/0.05);
             BREAKDURATION = Integer.parseInt(prop.getProperty("BREAKDURATION"));
             System.out.println(BREAKDURATION);
-            EYESFX = prop.getProperty("EYESFX");
             NOAUTORED =Integer.parseInt(prop.getProperty("NOAUTORED"));
             NOAUTOBRIGHT = Integer.parseInt(prop.getProperty("NOAUTOBRIGHT"));
-            redness = REDSHIFTCAP;
 
             // run syncronous functions
             
@@ -162,7 +205,7 @@ class Main{
         System.out.println("through location-based adjustments of your computer's color temperature and gamma");
         System.out.println("aswell as providing a built in eye timer, how handy!");
         System.out.println();
-        if (LONGITUDE != null && LATITUDE != null){ // another hacky solution. cann
+        if (LONGITUDE != null){ // another hacky solution. cann
             System.out.print("Would you like to enable location-based auto adjustments?(Y/N) ");
             // ask user
             Scanner input = new Scanner(System.in);
@@ -247,8 +290,7 @@ class Main{
                     if (autobrightstate == true){
                         System.out.println("autobright on");
                         if (!locationbased){
-                            brightness = NOAUTOBRIGHT;
-                            String command = "powershell.exe " + String.format("$brightness = %d;", brightness)
+                            String command = "powershell.exe " + String.format("$brightness = %d;", NOAUTOBRIGHT)
                             + "$delay = 0;"
                             + "$myMonitor = Get-WmiObject -Namespace root\\wmi -Class WmiMonitorBrightnessMethods;"
                             + "$myMonitor.wmisetbrightness($delay, $brightness)";
@@ -258,8 +300,8 @@ class Main{
                     else {
                         System.out.println("autobright off");
                         if (!locationbased){
-                            brightness = 10;
-                            String command = "powershell.exe " + String.format("$brightness = %d;", brightness)
+                            
+                            String command = "powershell.exe " + String.format("$brightness = %d;", NOAUTOBRIGHT)
                             + "$delay = 0;"
                             + "$myMonitor = Get-WmiObject -Namespace root\\wmi -Class WmiMonitorBrightnessMethods;"
                             + "$myMonitor.wmisetbrightness($delay, $brightness)";
@@ -272,18 +314,34 @@ class Main{
             }
             
             // location based auto changes
-            if (locationbased){
-                if (redshiftstate){
-                    // gets progressively more red as day goes to night
+            if (currentcounter >= UPDATECOUNTER){
+                currentcounter = 0;
+            
+                if (locationbased){
+                    if (redshiftstate){
+                        // gets progressively more red as day goes to night. follows cosine curve
+                        int redhue = getlocalred(REDSHIFTMIN, REDSHIFTCAP, LONGITUDE);
+                        System.out.println(redhue);
+                        String pwd = System.getProperty("user.dir");
+                        String command = String.format("powershell.exe & %s\\redshift\\redshift.exe -O %d", pwd, redhue);
+                        commandtoss(command);
+                    }
+                    if (autobrightstate){
+                        // gets progressively more dark as day goes to night
+                        int brightness = getlocalbright(BRIGHTNESSMIN, BRIGHTNESSCAP, LONGITUDE);
+                        System.out.println(brightness);
+                        String command = "powershell.exe " + String.format("$brightness = %d;", brightness)
+                            + "$delay = 0;"
+                            + "$myMonitor = Get-WmiObject -Namespace root\\wmi -Class WmiMonitorBrightnessMethods;"
+                            + "$myMonitor.wmisetbrightness($delay, $brightness)";
+                            commandtoss(command);
+                    }
 
                 }
-                if (autobrightstate){
-                    // gets progressively more dark as day goes to night
-
-
-                }
-
             }
+        currentcounter++; // update our frame counter.
         }
-	}
+        
+        
+    }
 }
