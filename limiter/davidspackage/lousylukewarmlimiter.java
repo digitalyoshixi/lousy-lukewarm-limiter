@@ -359,7 +359,7 @@ class Main{
             }
 
             // log saving
-            if (logcounter >= 10){ // 72000 is 1 hour
+            if (logcounter >= 72000){ // 72000 is 1 hour
                 logcounter = 0;
                 if (logline >= 99){ // only store 100 logs at a time.
                     logline = 0;
