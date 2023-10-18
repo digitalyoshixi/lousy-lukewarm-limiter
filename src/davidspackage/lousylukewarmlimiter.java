@@ -2,33 +2,21 @@ package davidspackage;
 
 // useful libraries
 import java.util.Scanner;
-import java.util.concurrent.CompletableFuture;
-import java.io.BufferedReader;
+import java.io.FileWriter;   // Import the FileWriter class
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.File; 
-import java.io.InputStreamReader;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 // key input
 import com.github.kwhat.jnativehook.GlobalScreen;
 import com.github.kwhat.jnativehook.NativeHookException;
-import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
-import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 
 
 // Program to manually adjust the brightness, redness and monitor screen time. save the
-
-// class RedSync implements Runnable{
-//      public void run() {
-//         System.out.println("Hello from a thread!");
-
-//     }
-// }
 
 class Main{
     
@@ -67,12 +55,13 @@ class Main{
         // grab UTC time
         Float timeoffset = longitude*24/360;
         String utc = Instant.now().toString();
+        
         int utchour = Integer.parseInt(utc.substring(11, 13));
         int utcmin = Integer.parseInt(utc.substring(14, 16));
         int utcsec = Integer.parseInt(utc.substring(17, 19));
 
         // find timescale(x variable)
-        Float localsecondstime = (utchour-timeoffset)*3600 + utcmin*60+utcsec;
+        Float localsecondstime = (utchour+timeoffset)*3600 + utcmin*60+utcsec;
         Float timescale = localsecondstime/86400; // 86400 seconds in a day. divided by local current time seconds
         
         // cosine graph to find color temperature
@@ -95,7 +84,7 @@ class Main{
         int utcsec = Integer.parseInt(utc.substring(17, 19));
 
         // find timescale(x variable)
-        Float localsecondstime = (utchour-timeoffset)*3600 + utcmin*60+utcsec;
+        Float localsecondstime = (utchour+timeoffset)*3600 + utcmin*60+utcsec;
         Float timescale = localsecondstime/86400; // 86400 seconds in a day. divided by local current time seconds
         
         // cosine graph to find color temperature
@@ -107,9 +96,7 @@ class Main{
         return brightness;
     }
 
-    public static void eyebeep(){
 
-    }
 
     // |||||||||||||||||| ======================================================= |||||||||||||
     // |||||||||||||||||| ================ MAIN FUNCTION ======================== |||||||||||||
@@ -136,8 +123,6 @@ class Main{
         boolean redshiftstate = false;
         boolean autobrightstate = false;
         String pwd = System.getProperty("user.dir");
-
-        //String stopfilepath = pwd+"\\src\\stop.mp3";
         
         
         // our config variables
@@ -150,20 +135,24 @@ class Main{
         int NOAUTORED = 4500;
         int NOAUTOBRIGHT = 5;
         Float LONGITUDE = null; // default strawmen values
-        
+        // logfile
+        String LOGFILE = "";
+        String[][] metricslist = new String[100][3]; // log file matrix
         List<String> REDSHIFTBIND = Arrays.asList("Alt","Shift","N"); // default keybind
         List<String> AUTOBRIGHTBIND = Arrays.asList("Alt","Shift","M"); // default keybind
         int UPDATECOUNTER = 200; // every 5 seconds.
 
         // ----------------- NON-CONSTANTS ----------------
-        
+        int redhue = NOAUTORED;
+        int brightness = NOAUTOBRIGHT;
         int currentcounter = 0; // counter for updatecounter
-
+        int logcounter = 0;
+        int logline = 0;
         // ================== CONFIG FILE READING ========
         String optionfilepath = "";
         // fetch the config file path from command line
         if (args.length > 0){ // if we have arguments:
-            // search for argument flag '-options'
+            // search for argument flag '-config'
             for (int i = 0; i < args.length; i++){
                 if ((args[i].equals("-config")) && (i < (args.length-1))){
                     optionfilepath = args[i+1];
@@ -187,10 +176,9 @@ class Main{
             UPDATECOUNTER = (int)Math.round(Float.parseFloat(prop.getProperty("UPDATECOUNTER"))/0.05);
             NOAUTORED =Integer.parseInt(prop.getProperty("NOAUTORED"));
             NOAUTOBRIGHT = Integer.parseInt(prop.getProperty("NOAUTOBRIGHT"));
-
-            // run syncronous functions
+            // log file
+            LOGFILE = prop.getProperty("LOGFILE");
             
-
         
 
         } catch (FileNotFoundException ex) {
@@ -198,6 +186,37 @@ class Main{
         } catch (IOException ex) {
             System.out.println("IO not resolved");
         }
+
+        // LOG FILE
+        // grab the log file if there is any.
+        try {
+            File logfile = new File(LOGFILE);
+            Scanner myreader = new Scanner(logfile);
+            // populate our metricslist with the log file info
+            while (myreader.hasNextLine()) {
+                String data = myreader.nextLine();
+                String[] datalist = data.split(",");
+                if (datalist.length == 3){
+                    metricslist[logline] = datalist;
+                }
+                else{
+                    metricslist[logline][0] = null;
+                    metricslist[logline][1] = null;
+                    metricslist[logline][2] = null;
+                }
+                logline++;
+            }
+            
+            myreader.close();
+        }
+        catch (Exception  e){
+            System.out.println("No log file provided. Making a new one");
+            File logfile = new File("logfile.txt");
+            logfile.createNewFile();
+            LOGFILE = "logfile.txt";            
+        }
+
+        
         
         // --------------------------------------------------
         // ----------------- USER INTRODUCTION --------------
@@ -317,19 +336,18 @@ class Main{
             // location based auto changes
             if (currentcounter >= UPDATECOUNTER){
                 currentcounter = 0;
-            
                 if (locationbased){
                     if (redshiftstate){
                         // gets progressively more red as day goes to night. follows cosine curve
-                        int redhue = getlocalred(REDSHIFTMIN, REDSHIFTCAP, LONGITUDE);
-                        System.out.println(redhue);
-                        String command = String.format("powershell.exe & %s\\\\redshift\\\\redshift.exe -x & %s\\redshift\\redshift.exe -O %d", pwd, redhue);
+                        redhue = getlocalred(REDSHIFTMIN, REDSHIFTCAP, LONGITUDE);
+                        //System.out.println(redhue);
+                        String command = String.format("powershell.exe & %s\\\\redshift\\\\redshift.exe -x & %s\\redshift\\redshift.exe -O %d",pwd, pwd, redhue);
                         commandtoss(command);
                     }
                     if (autobrightstate){
                         // gets progressively more dark as day goes to night
-                        int brightness = getlocalbright(BRIGHTNESSMIN, BRIGHTNESSCAP, LONGITUDE);
-                        System.out.println(brightness);
+                        brightness = getlocalbright(BRIGHTNESSMIN, BRIGHTNESSCAP, LONGITUDE);
+                        //System.out.println(brightness);
                         String command = "powershell.exe " + String.format("$brightness = %d;", brightness)
                             + "$delay = 0;"
                             + "$myMonitor = Get-WmiObject -Namespace root\\wmi -Class WmiMonitorBrightnessMethods;"
@@ -339,7 +357,49 @@ class Main{
 
                 }
             }
-        currentcounter++; // update our frame counter.
+
+            // log saving
+            if (logcounter >= 10){ // 72000 is 1 hour
+                logcounter = 0;
+                if (logline >= 99){ // only store 100 logs at a time.
+                    logline = 0;
+                }
+                //System.out.println(logline);
+                // metric list update
+                String utc = Instant.now().toString().substring(0,18);
+                metricslist[logline][0] = utc;
+                metricslist[logline][1] = Integer.toString(redhue);
+                metricslist[logline][2] = Integer.toString(brightness);
+                
+                logline++;
+                // save the list to the file.
+                try {
+                    FileWriter myWriter = new FileWriter(LOGFILE);
+                    String writtenstring = "";
+                    // populate the written string
+                    boolean breakbool = false;
+                    for (String[] row : metricslist){
+                        if (breakbool){
+                            break;
+                        }
+                        for (String cell : row){
+                            if (cell == null){
+                                breakbool = true;
+                                break;
+                            }
+                            writtenstring += cell + ",";
+                        }
+                        writtenstring += "\n";
+                    }
+                    myWriter.write(writtenstring);
+                    myWriter.close();
+                    } catch (Exception e) {
+                        
+                }
+                
+            }
+            logcounter++;
+            currentcounter++; // update our frame counter.
         
         }
         
